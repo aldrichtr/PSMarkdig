@@ -47,7 +47,7 @@ function Import-Markdown {
         # Path to the debug log for the parser (if enabled)
         [Parameter(
         )]
-        [string]$LogPath = "$(Get-Location)\markdig.parser.log"
+        [string]$LogPath
     )
     begin {
         Write-Debug "`n$('-' * 80)`n-- Begin $($MyInvocation.MyCommand.Name)`n$('-' * 80)"
@@ -59,8 +59,8 @@ function Import-Markdown {
                     Write-Debug "Getting content from $File"
                     $options = $PSBoundParameters
                     [void]$options.Remove('Path')
-                    $doc = (Get-Content $File -Raw | ConvertTo-MarkdigObject @PSBoundParameters)
-                    Write-Output $doc -NoEnumerate
+                    Get-Content $File -Raw
+                      | ConvertTo-MarkdigObject @PSBoundParameters
                 } catch {
                     $PSCmdlet.ThrowTerminatingError($_)
                 }
