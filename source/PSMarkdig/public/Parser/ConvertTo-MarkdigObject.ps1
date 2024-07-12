@@ -44,11 +44,12 @@ function ConvertTo-MarkdigObject {
         )]
         [switch]$DebugParser,
 
+        # If DebugParser is given but no LogPath, then use [System.Console]::Out as the TextWriter
         # Path to the debug log for the parser (if enabled)
         [Parameter(
             ParameterSetName = 'debuglog'
         )]
-        [string]$LogPath = "$(Get-Location)\markdig.parser.log"
+        [string]$LogPath
     )
     begin {
         Write-Debug "`n$('-' * 80)`n-- Begin $($MyInvocation.MyCommand.Name)`n$('-' * 80)"
@@ -73,13 +74,20 @@ function ConvertTo-MarkdigObject {
             Write-Debug "Length of content to be parsed: $($collect.Length)"
         }
 
+        #TODO: Move this into a New-MarkdigBuilder so that options can be built up and accessed programatically
         $builder = [MarkdownPipelineBuilder]::new()
 
         if ($DebugParser) {
-            Write-Debug "Markdown parser debug enabled.  Writing to $LogPath"
+            Write-Debug "Markdown parser debug enabled"
+            if ($PSBoundParameters.ContainsKey('LogPath')) {
+                Write-Debug "- Writing to $LogPath"
+                [TextWriter]$tw = [File]::CreateText( $LogPath )
+                $builder.DebugLog = $tw
+            } else {
+                Write-Debug "- Writing to Console"
+                $builder.DebugLog = [System.Console]::Out
+            }
 
-            [TextWriter]$tw = [File]::CreateText( $LogPath )
-            $builder.DebugLog = $tw
         }
         $builder = [MarkdownExtensions]::Configure($builder, $markdigExtension)
 
