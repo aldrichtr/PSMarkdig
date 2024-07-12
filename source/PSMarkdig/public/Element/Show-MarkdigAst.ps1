@@ -15,6 +15,11 @@ function Show-MarkdigAst {
         )]
         [MarkdownObject]$Element,
 
+        # Show full name of object
+        [Parameter(
+        )]
+        [switch]$FullName,
+
         [Parameter(
             DontShow
         )]
@@ -30,7 +35,11 @@ function Show-MarkdigAst {
     }
     process {
         Write-Debug "Index is $index, Indent is $indent"
-        $type = $Element.GetType().FullName
+        if ($FullName) {
+            $type = $Element.GetType().FullName
+        } else {
+            $type = $Element.GetType().Name
+        }
         "$(' ' * $indent)[$index] - $type"
         $index++
         $count = Write-Output $Element -NoEnumerate | Select-Object -ExpandProperty Count
@@ -40,7 +49,7 @@ function Show-MarkdigAst {
         if ($count -gt 1) {
             $indent++
             for ($i = 0; $i -lt $count; $i++) {
-                Show-MarkdigAst $Element[$i] -index $i -indent $indent
+                Show-MarkdigAst $Element[$i] -FullName:$FullName -index $i -indent $indent
             }
         }
         $indent = $currentIndent
