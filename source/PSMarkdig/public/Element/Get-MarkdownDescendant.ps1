@@ -8,15 +8,16 @@ function Get-MarkdownDescendant {
     [Alias('Get-MarkdownElement')]
     param(
         [Parameter(
-            Position = 0
+            ValueFromPipeline,
+            Position = 1
         )]
         [MarkdownObject]$Element,
 
         # The type of element to return
         [Parameter(
-            Position = 1
+            Position = 0
         )]
-        [string]$Type = '',
+        [string]$Type,
 
         # Return All elements/descendants
         [Parameter(
@@ -64,7 +65,7 @@ function Get-MarkdownDescendant {
             $method = $methodDescendants.MakeGenericMethod($objectType)
             $method.Invoke($mdExtensionsType, @(,$Element)) | ForEach-Object {
                 Write-Debug "This element is a $($_.GetType().FullName)"
-                Write-Output $_
+                Write-Output $_ -NoEnumerate
             }
         }
 
