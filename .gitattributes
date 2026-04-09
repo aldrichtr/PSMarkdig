@@ -1,0 +1,60 @@
+# Auto detect text files and perform LF normalization
+*          text=auto
+#
+# The above will handle all files NOT found below
+#
+
+# Documents
+*.md       text diff=markdown
+*.mdx      text diff=markdown
+*.tex      text diff=tex
+*.csv      text eol=crlf
+
+*.txt      text
+
+
+
+# Graphics
+*.png      binary
+*.jpg      binary
+*.jpeg     binary
+*.gif      binary
+*.tif      binary
+*.tiff     binary
+*.ico      binary
+# SVG treated as text by default.
+*.svg      text
+# If you want to treat it as binary,
+
+# These are explicitly old-style windows files and should use crlf
+*.bat      text eol=crlf
+*.cmd      text eol=crlf
+
+# Serialization
+*.json     text
+*.jsonc    text
+*.toml     text
+*.xml      text
+*.yaml     text
+*.yml      text
+
+# Text files where line endings should be preserved
+*.patch    -text
+
+#
+# Exclude files from exporting
+#
+
+.gitattributes export-ignore
+.gitignore     export-ignore
+.gitkeep       export-ignore
+
+# PowerShell specific
+*.ps1      text eol=lf
+*.ps1x     text eol=lf
+*.psm1     text eol=lf
+*.psd1     text eol=lf
+*.ps1xml   text eol=lf
+*.pssc     text eol=lf
+*.psrc     text eol=lf
+*.cdxml    text eol=lf
