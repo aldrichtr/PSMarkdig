@@ -63,6 +63,8 @@ function ConvertTo-MarkdigObject {
   }
   end {
     # SECTION Format the content
+    if ([string]::IsNullorEmpty($collect)) { throw "No content receieved" }
+
     $content = $collect -join "`n"
 
     Write-Debug "Content is:`n$([regex]::Escape($content) -replace '\\n', "\n`n")"
