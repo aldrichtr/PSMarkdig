@@ -1,0 +1,11 @@
+
+out/
+
+
+stage/
+
+**/*.log
+**/*.bak
+
+# The project wiki is its own repo
+docs/wiki
