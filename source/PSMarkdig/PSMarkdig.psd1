@@ -45,7 +45,7 @@
     # PowershellHostName = ''
     # PowershellHostVersion = ''
     # RequiredModules = ''
-    # RequiredAssemblies = ''
+    RequiredAssemblies = @("bin/markdig/1.1.2/lib/net10.0/markdig.dll")
     # ProcessorArchitecture = ''
     # DotNetFrameworkVersion = ''
     # CLRVersion = ''

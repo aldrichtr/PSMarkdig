@@ -2,17 +2,6 @@ using namespace System.Collections
 using namespace System.Io
 
 
-try {
-
-  if ($env:__PSMODULE_DEBUG -eq $true) {
-    $DebugPreference = 'Continue' # "Switch on" Write-Debug messages
-    $private:__save_pref = @{
-      Debug    = $DebugPreference
-      Verbose  = $VerbosePreference
-      Progress = $ProgressPreference
-    }
-  }
-
   <#
 .SYNOPSIS
   Generic Development-Mode PowerShell Script Module
@@ -29,7 +18,7 @@ try {
   those files are loaded, the loading continues with any other files that were not already
   listed.
 #>
-  #region Header
+  # SECTION: Header
   $private:templateInfo = @{
     Name     = 'Source module template'
     Version  = '0.7.3'
@@ -38,6 +27,17 @@ try {
 
   $private:modulePath = $PSCommandPath
   $private:moduleName = ($private:modulePath | Split-Path -Leaf)
+
+try {
+
+  if ($env:__PSMODULE_DEBUG -eq $true) {
+    $DebugPreference = 'Continue' # "Switch on" Write-Debug messages
+    $private:__save_pref = @{
+      Debug    = $DebugPreference
+      Verbose  = $VerbosePreference
+      Progress = $ProgressPreference
+    }
+  }
 
 
   #! if debug was turned on, we need to see it and pass it into this scope
@@ -52,9 +52,9 @@ try {
       ('=' * 80)
     ) | Write-Debug
   }
-  #endregion Header
+  # !SECTION: Header
 
-  #region Options
+  # SECTION: Options
 
   $private:sourceDirectories = @(
     'enum',
@@ -84,26 +84,24 @@ try {
     Recurse     = $true
     ErrorAction = 'Stop'
   }
-  #endregion Options
+  # !SECTION: Options
 
-  [ArrayList]$private:sourceFiles = $private:sourceDirectories
-| ForEach-Object {
+  [ArrayList]$private:sourceFiles = $private:sourceDirectories | ForEach-Object {
     $private:importOptions.Path = (Join-Path $PSScriptRoot $_)
-    Get-ChildItem @private:importOptions
-  | ForEach-Object { [Path]::GetRelativePath($PSScriptRoot, $_ ) }
+    Get-ChildItem @private:importOptions | ForEach-Object { [Path]::GetRelativePath($PSScriptRoot, $_ ) }
   }
 
   Write-Debug "$($sourceFiles.Count) Source files found"
 
-  #region Prefix file
+  # SECTION: Prefix file
   if ($prefixFile | Test-Path) {
     Write-Debug "Loading prefix file $prefixFile"
     . $prefixFile
     [void]$sourceFiles.Remove([Path]::GetRelativePath($PSScriptRoot, $_))
   }
-  #endregion Prefix file
+  # !SECTION: Prefix file
 
-  #region Custom Load Order
+  # SECTION: Custom Load Order
   if (Test-Path "$PSScriptRoot\LoadOrder.txt") {
     Write-Debug 'Using custom load order'
     try {
@@ -153,11 +151,11 @@ try {
       Write-Error "Custom load order $_"
     }
   }
-  #endregion Custom Load Order
+  # !SECTION: Custom Load Order
 
   Write-Debug "$($sourceFiles.Count) Source files found"
 
-  #region Load files
+  # SECTION: Load files
   $private:remainingFiles = $sourceFiles.Clone()
   try {
     foreach ($private:file in $remainingFiles) {
@@ -182,27 +180,27 @@ try {
   } catch {
     throw "An error occurred during the processing of file '$file':`n$_"
   }
-  #endregion Load files
+  # !SECTION: Load files
 
-  #region Format files
+  # SECTION: Format files
   if ($private:formatsOptions.Path | Test-Path) {
     foreach ($private:formatFile in (Get-ChildItem @private:formatsOptions)) {
       Write-Debug "Adding Formats from $($private:formatFile.Name)"
       Update-FormatData -AppendPath $private:formatFile.FullName
     }
   }
-  #endregion Format files
+  # !SECTION: Format files
 
-  #region Type files
+  # SECTION: Type files
   if ($private:typesOptions.Path | Test-Path) {
     foreach ($private:typeFile in (Get-ChildItem @private:typesOptions)) {
       Write-Debug "Adding types from $($private:typeFile.Name)"
       Update-TypeData -AppendPath $private:typeFile
     }
   }
-  #endregion Type files
+  # !SECTION: Type files
 
-  #region Suffix file
+  # SECTION: Suffix file
   if ($private:suffixFile | Test-Path) {
     Write-Debug "Loading suffix file $private:suffixFile"
     . $private:suffixFile
@@ -210,7 +208,7 @@ try {
     . $suffixFile
     [void]$sourceFiles.Remove([Path]::GetRelativePath($PSScriptRoot, $suffixFile))
   }
-  #endregion Suffix file
+  # !SECTION: Suffix file
 
 }
 
