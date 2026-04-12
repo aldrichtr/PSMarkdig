@@ -13,7 +13,7 @@ function Get-MarkdigExtension {
     [Parameter(
     )]
     [ArgumentCompleter({ MarkdigExtensionCompleter @args })]
-    [string[]]$Name,
+    [string]$Name,
 
     # Filter the name
     [Parameter(
@@ -36,15 +36,23 @@ function Get-MarkdigExtension {
   }
   process {
     Write-Debug "`n$('-' * 80)`n-- Process start $($MyInvocation.MyCommand.Name)`n$('-' * 80)"
-    [Markdig.MarkdownExtensions]
+    $extensions = [Markdig.MarkdownExtensions]
     | Get-Member -Static
     | Where-Object Name -Match '^Use(\w+)'
-    | Foreach-Object {
-        [PSCustomObject]@{
-          Name = $Matches.1
-          Extension = $_
-        }
+    | ForEach-Object {
+      [PSCustomObject]@{
+        Name      = $Matches.1
+        Extension = $_
       }
+    }
+
+    foreach ($ext in $extensions) {
+      if ((-not ($PSBoundParameters.ContainsKey('Name'))) -or
+          ($ext.Name -like "*$Name*")) {
+        $ext
+      }
+    }
+
     Write-Debug "`n$('-' * 80)`n-- Process end $($MyInvocation.MyCommand.Name)`n$('-' * 80)"
   }
   end {
