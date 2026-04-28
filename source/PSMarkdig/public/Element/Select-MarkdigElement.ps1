@@ -52,7 +52,6 @@ function Select-MarkdigDescendant {
       $method.Invoke($objExtensions, @(,$Element))
       # $method.Invoke([MarkdownObjectExtensions], (Write-Output $Element -NoEnumerate))
     }
-
   }
   end {
     Write-Debug "`n$('-' * 80)`n-- End $($MyInvocation.MyCommand.Name)`n$('-' * 80)"
