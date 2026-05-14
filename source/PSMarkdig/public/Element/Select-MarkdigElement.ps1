@@ -50,7 +50,6 @@ function Select-MarkdigDescendant {
       # Create the template method so we can use it on our element
       $method = $descendants.MakeGenericMethod($objectType)
       $method.Invoke($objExtensions, @(,$Element))
-      # $method.Invoke([MarkdownObjectExtensions], (Write-Output $Element -NoEnumerate))
     }
   }
   end {
