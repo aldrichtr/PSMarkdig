@@ -1,5 +1,6 @@
 
 using namespace System.Collections
+using namespace System.Text
 using namespace Markdig
 using namespace Markdig.Parsers
 using namespace Markdig.Syntax
@@ -18,10 +19,11 @@ function ConvertTo-MarkdigObject {
     )]
     [string[]]$Content,
 
-    # Short-names of extensions to add
+    # Provide a custom list of extensions
     [Parameter(
     )]
-    [string[]]$Extension,
+    [PSTypeName('PSMarkdig.MarkdownExtensionInfo')]
+    [Object[]]$Extensions,
 
     # Use an existing pipeline
     [Parameter(
@@ -47,10 +49,6 @@ function ConvertTo-MarkdigObject {
     [string]$LogPath
   )
   begin {
-    $self = $MyInvocation.MyCommand
-    Write-Debug "`n$('-' * 80)`n-- Begin $($self.Name)`n$('-' * 80)"
-
-
     $collect = [ArrayList]::new()
   }
   process {
@@ -62,12 +60,13 @@ function ConvertTo-MarkdigObject {
     # !SECTION
   }
   end {
-    # SECTION Format the content
-    if ([string]::IsNullorEmpty($collect)) { throw "No content receieved" }
+    # SECTION Normalize the content
+    # We want to pass one *text object* to the parser, so we join all the individual lines, and normalize
+    # the line-endings
+    if ([string]::IsNullorEmpty($collect)) { throw 'No content receieved' }
 
     $content = $collect -join "`n"
 
-    Write-Debug "Content is:`n$([regex]::Escape($content) -replace '\\n', "\n`n")"
     if ([string]::IsNullorEmpty($content)) {
       throw 'No content was received'
     } else {
@@ -79,17 +78,21 @@ function ConvertTo-MarkdigObject {
     if ($PSBoundParameters.ContainsKey('Pipeline')) {
       Write-Debug '- Using existing pipeline'
     } else {
-      $builder = [MarkdownPipelineBuilder]::new()
-    # !SECTION
+      $options = @{
+        TrackTrivia           = (-not $IgnoreTrivia)
+        PreciseSourceLocation = $true
+      }
+      $builder = New-MarkdigPipelineBuilder @options
+      # !SECTION
 
-    # SECTION Parser Debugging
+      # SECTION Parser debugging output
+
       if ($DebugParser) {
         Write-Debug 'Markdown parser debug enabled'
         if ($PSBoundParameters.ContainsKey('LogPath')) {
           Write-Debug "- Writing to $LogPath"
           [TextWriter]$tw = [File]::CreateText( $LogPath )
           $builder.DebugLog = $tw
-          #TODO: Move this into a New-MarkdigBuilder so that options can be built up and accessed programatically
         } else {
           Write-Debug '- Writing to Console'
           $builder.DebugLog = [System.Console]::Out
@@ -97,28 +100,96 @@ function ConvertTo-MarkdigObject {
       }
       # !SECTION
 
-    # SECTION Setup extensions
-    if ($PSBoundParameters.ContainsKey('Extension')) {
-      $markdigExtension = $Extension -join '+'
-    } else {
-      $markdigExtension = 'advanced+yaml'
-    }
-    Write-Debug "Setting extensions to $markdigExtension"
-    $builder = [MarkdownExtensions]::Configure($builder, $markdigExtension)
-    # !SECTION
+      # SECTION Setup extensions
 
-      # SECTION track whitespace and newlines
-      if (-not($IgnoreTrivia)) {
-        $builder.PreciseSourceLocation = $true
-        $builder = [MarkdownExtensions]::EnableTrackTrivia($builder)
+      <# NOTE
+       # Extension Names
+       The extension system is very robust and configurable, but there are two problems we need to deal
+       with:
+       1.  If what we want is to enable *all* extensions, and thus be able to parse the *most* amount of
+           markdown elements, that is not easy to do programmatically.  It is trivial to get a list of
+            extensions, see [[Get-MarkdigExtension]], but some of the extensions are "grouping" extensions,
+            like the `AdvancedExtensions` which represents about half of the most used (but critically, not
+            the YAML front matter ext), or the `SelfPipeline` which ignores all other extensions and builds
+            the list from special comments in the document.
+            Unfortunately, there is currently no property or method on the extensions that can help with
+            identifying which are groups.
+        2.  There are *short-codes* for the extensions [^1], which is what gets passed (as a '+' separated
+            string) but these names are also not part of the extension object, you just have to *know them*
+        That said, I'm making an assumption that by default, we would want all of the extensions that
+        actually contribute additional parsing "turned on".  So I'm going to need to hard code those names
+        here for the time being until markdig adds some properties or methods to get the list
+        programmatically
 
+        [^1] https://github.com/xoofx/markdig/blob/master/src/Markdig/MarkdownExtensions.cs#L548
+     #>
+     # LINK Get-MarkdigExtension.ps1
+      $allExtensions = Get-MarkdigExtension
+
+
+      if (-not ($PSBoundParameters.ContainsKey('Extensions'))) {
+        <# This is my opinionated list of "All" extensions #>
+        $wanted = @(
+          <# -- Not used
+            'Advanced', -- Group of extensions listed individually below
+            'SoftlineBreak', -- Non-obvious change to output so it should be explicitly added
+            'SelfPipeline',  -- alternate method of adding extensions
+            'JiraLinks',  -- Needs a jira url, so it should be configured and added explicitly
+            'ReferralLinks', -- Adds rel attributes, should be explicitly added
+            'PragmaLines', -- Non-obvious change to code blocks
+            'NonAsciiNoEscape', -- Only useful for specific browser rendering
+          -- #>
+          <# -- Advanced -- #>
+          'AlertBlocks', 'Abbreviations', 'AutoIdentifiers', 'Citations', 'CustomContainers',
+          'DefinitionLists', 'EmphasisExtras', 'Figures', 'Footers', 'FootNotes', 'GridTables',
+          'Mathmatics', 'MediaLinks', 'PipeTables', 'ListExtras', 'TaskLists', 'Diagrams',
+          'AutoLinks',
+          <# -- Additional -- #>
+          'EmojiAndSmiley', 'SmartyPants', 'Bootstrap', 'YamlFrontMatter',
+          <# -- Required Last -- #>
+          'GenericAttributes'
+        )
+
+        $extList = [ArrayList]::new()
+
+        foreach ($w in $wanted) {
+          $ext = $allExtensions | Where-Object Name -Like $w
+          if ($null -ne $ext) {
+            $null = $extList.Add($ext)
+          }
+        }
       } else {
-        Write-Verbose 'Ignoring whitespace and other trivia'
+        $extList = $Extensions
       }
-      # !SECTION
 
+      $mdExt = [StringBuilder]::new()
+      $counter = 0
+      foreach ($e in $extList) {
+        $counter++
+        $code = $e.ShortCode
+        if (-not ([string]::IsNullorEmpty($code))) {
+          if ($counter -gt 1) {
+            $null = $mdExt.Append('+')
+            $first = $false
+          }
+          $null = $mdExt.Append($code)
+        } else {
+          Write-Warning "$($e.Name) Extension has no shortcode. It was not added to the parser"
+        }
+        Write-Debug "Adding Extension $($e.Name)"
+      }
+
+
+      # -- Add the extensions to the builder
+      $builder = [MarkdownExtensions]::Configure($builder, $mdExt.ToString())
+      # !SECTION
+      # -----------------------------------------------------------------------------------------------------
+
+
+      # -----------------------------------------------------------------------------------------------------
       # SECTION Build the pipeline
       Write-Debug 'Parser configured'
+      Write-Debug ('-' * 40)
       $extensions = $builder.Extensions
       | ForEach-Object {
         $_.GetType()
@@ -127,20 +198,22 @@ function ConvertTo-MarkdigObject {
       Write-Debug ('- {0,-28} => {1}' -f 'Extensions', (($extensions -replace 'Extension$', '') -join ', '))
       Write-Debug ('- {0,-28} => {1}' -f 'Precise Source Location', $builder.PreciseSourceLocation)
       Write-Debug ('- {0,-28} => {1}' -f 'Track trivia(whitespace)', $builder.TrackTrivia)
+      Write-Debug ('- {0,-28} => {1}' -f 'Context properties', $context.Properties.Keys.Count)
       Write-Debug ('- {0,-28} => {1}' -f 'Debug Log', $builder.DebugLog)
+      Write-Debug ('-' * 40)
 
       $Pipeline = $builder.Build()
     }
     # !SECTION
+    # -----------------------------------------------------------------------------------------------------
 
-    # NOTE: Store the Pipeline in the Module scope
+    # NOTE: Store the Pipeline in the Module scope, because it is also used for calls to render
     $script:MarkdigPipeline = $Pipeline
 
     # SECTION Parse the content
     Write-Debug "Parsing document $File"
     $context = [MarkdownParserContext]::new()
     [MarkdownDocument]$document = [MarkdownParser]::Parse( $content , $Pipeline , $context)
-    Write-Debug "Context properties: $($context.Properties.Keys.Count))"
     if ($null -ne $tw) {
       $tw.Flush()
       $tw.Close()
