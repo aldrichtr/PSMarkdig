@@ -37,24 +37,10 @@ function Import-Markdown {
     [Alias('PSPath')]
     [string[]]$Path,
 
-    # Additional extensions to add
-    <#
-          **Note** by default, the following extensions are enabled:
-
-          | list                | of                             | extensions           |
-          | :---                | :---                           | :---                 |
-          | UseAbbreviations    | UseAutoIdentifiers             | UseCitations         |
-          | UseCustomContainers | UseDefinitionLists             | UseEmphasisExtras    |
-          | UseFigures          | UseFooters                     | UseFootnotes         |
-          | UseGridTables       | UseMathematics                 | UseMediaLinks        |
-          | UsePipeTables       | UseListExtras                  | UseTaskLists         |
-          | UseDiagrams         | UseAutoLinks                   | UseGenericAttributes |
-          | UseYamlFrontMatter  | UseReferralLinks("noreferrer") |                      |
-
-        #>
-    [Parameter(
-    )]
-    [string[]]$Extension,
+    # A list of Markdig Extensions to add to the pipeline
+    # all Extensions are enabled by default
+    [Parameter()]
+    [string[]]$Extensions,
 
     # Ignore trivia (whitespace, extra heading characters, unescaped strings, etc)
     [Parameter(
@@ -71,22 +57,22 @@ function Import-Markdown {
     )]
     [string]$LogPath
   )
-  begin {
-    $self = $MyInvocation.MyCommand
-    Write-Debug "`n$('-' * 80)`n-- Begin $($self.Name)`n$('-' * 80)"
-  }
+  begin {}
+  <# --------------------------------------------------------------------------
+  This function is basically a wrapper around our private function
+  `ConvertTo-MarkdigObject`
+  -------------------------------------------------------------------------- #>
   process {
     switch ($PSCmdlet.ParameterSetName) {
       'AsText' {
-        Write-Debug "Received text content`n$Content"
-        Write-Debug "Calling convert with $($PSBoundParameters | Out-String)"
+        Write-Debug "Received text content"
         ConvertTo-MarkdigObject @PSBoundParameters
       }
       'AsPath' {
         foreach ($File in $Path) {
           if (Test-Path $File) {
             try {
-              Write-Debug "Getting content from $File"
+              Write-Debug "Received Path to $File"
               $options = $PSBoundParameters
               [void]$options.Remove('Path')
               Get-Content $File -Raw
@@ -111,7 +97,5 @@ function Import-Markdown {
       }
     }
   }
-  end {
-    Write-Debug "`n$('-' * 80)`n-- End $($self.Name)`n$('-' * 80)"
-  }
+  end {}
 }
