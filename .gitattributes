@@ -5,8 +5,8 @@
 #
 
 # Documents
-*.md       text diff=markdown
-*.mdx      text diff=markdown
+*.md       text diff=markdown eol=lf
+*.mdx      text diff=markdown eol=lf
 *.tex      text diff=tex
 *.csv      text eol=crlf
 
@@ -31,12 +31,12 @@
 *.cmd      text eol=crlf
 
 # Serialization
-*.json     text
-*.jsonc    text
-*.toml     text
-*.xml      text
-*.yaml     text
-*.yml      text
+*.json     text eol=lf
+*.jsonc    text eol=lf
+*.toml     text eol=lf
+*.xml      text eol=lf
+*.yaml     text eol=lf
+*.yml      text eol=lf
 
 # Text files where line endings should be preserved
 *.patch    -text
