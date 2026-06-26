@@ -1,5 +1,7 @@
 
+using namespace System.Management.Automation
 using namespace System.Collections
+using namespace System.Text
 using namespace Markdig
 using namespace Markdig.Parsers
 using namespace Markdig.Syntax
@@ -18,15 +20,20 @@ function ConvertTo-MarkdigObject {
     )]
     [string[]]$Content,
 
-    # Short-names of extensions to add
-    [Parameter(
-    )]
-    [string[]]$Extension,
+    # Provide a custom list of extensions
+    [Parameter()]
+    [PSTypeName('PSMarkdig.MarkdownExtensionInfo')]
+    [Object[]]$Extensions,
 
     # Use an existing pipeline
     [Parameter(
     )]
     [MarkdownPipeline]$Pipeline,
+
+    # Pass in a custom ParserContext
+    [Parameter(
+    )]
+    [MarkdownParserContext]$Context,
 
     # Ignore trivia (whitespace, extra heading characters, unescaped strings, etc)
     [Parameter(
@@ -47,10 +54,6 @@ function ConvertTo-MarkdigObject {
     [string]$LogPath
   )
   begin {
-    $self = $MyInvocation.MyCommand
-    Write-Debug "`n$('-' * 80)`n-- Begin $($self.Name)`n$('-' * 80)"
-
-
     $collect = [ArrayList]::new()
   }
   process {
@@ -62,96 +65,67 @@ function ConvertTo-MarkdigObject {
     # !SECTION
   }
   end {
-    # SECTION Format the content
-    if ([string]::IsNullorEmpty($collect)) { throw "No content receieved" }
+    # SECTION Normalize the content
+    # We want to pass one *text object* to the parser, so we join all the individual lines, and normalize
+    # the line-endings
+    if ([string]::IsNullorEmpty($collect)) { throw 'No content receieved' }
 
-    $content = $collect -join "`n"
-
-    Write-Debug "Content is:`n$([regex]::Escape($content) -replace '\\n', "\n`n")"
-    if ([string]::IsNullorEmpty($content)) {
-      throw 'No content was received'
+    # Stuff the content back into the Content parameter
+    if ($collect.Count -gt 1) {
+      $Content = $collect -join "`n"
     } else {
-      Write-Debug "Length of content to be parsed: $($content.Length)"
+      $Content = $collect
     }
     # !SECTION
 
-    # SECTION Create the parser pipeline
-    if ($PSBoundParameters.ContainsKey('Pipeline')) {
-      Write-Debug '- Using existing pipeline'
-    } else {
-      $builder = [MarkdownPipelineBuilder]::new()
-    # !SECTION
-
-    # SECTION Parser Debugging
-      if ($DebugParser) {
-        Write-Debug 'Markdown parser debug enabled'
-        if ($PSBoundParameters.ContainsKey('LogPath')) {
-          Write-Debug "- Writing to $LogPath"
-          [TextWriter]$tw = [File]::CreateText( $LogPath )
-          $builder.DebugLog = $tw
-          #TODO: Move this into a New-MarkdigBuilder so that options can be built up and accessed programatically
-        } else {
-          Write-Debug '- Writing to Console'
-          $builder.DebugLog = [System.Console]::Out
+    if (-not ($PSBoundParameters.ContainsKey('Pipeline'))) {
+      $options = $PSBoundParameters
+      foreach ($p in @('Content', 'Context')) {
+        if (-not ($PSBoundParameters.ContainsKey($p))) {
+          $null = $options.Remove($p)
         }
       }
-      # !SECTION
-
-    # SECTION Setup extensions
-    if ($PSBoundParameters.ContainsKey('Extension')) {
-      $markdigExtension = $Extension -join '+'
-    } else {
-      $markdigExtension = 'advanced+yaml'
+      $Pipeline = New-MarkdigPipeline @options
+      Remove-Variable options
     }
-    Write-Debug "Setting extensions to $markdigExtension"
-    $builder = [MarkdownExtensions]::Configure($builder, $markdigExtension)
-    # !SECTION
-
-      # SECTION track whitespace and newlines
-      if (-not($IgnoreTrivia)) {
-        $builder.PreciseSourceLocation = $true
-        $builder = [MarkdownExtensions]::EnableTrackTrivia($builder)
-
-      } else {
-        Write-Verbose 'Ignoring whitespace and other trivia'
-      }
-      # !SECTION
-
-      # SECTION Build the pipeline
-      Write-Debug 'Parser configured'
-      $extensions = $builder.Extensions
-      | ForEach-Object {
-        $_.GetType()
-        | Select-Object -ExpandProperty Name
-      }
-      Write-Debug ('- {0,-28} => {1}' -f 'Extensions', (($extensions -replace 'Extension$', '') -join ', '))
-      Write-Debug ('- {0,-28} => {1}' -f 'Precise Source Location', $builder.PreciseSourceLocation)
-      Write-Debug ('- {0,-28} => {1}' -f 'Track trivia(whitespace)', $builder.TrackTrivia)
-      Write-Debug ('- {0,-28} => {1}' -f 'Debug Log', $builder.DebugLog)
-
-      $Pipeline = $builder.Build()
-    }
-    # !SECTION
-
-    # NOTE: Store the Pipeline in the Module scope
-    $script:MarkdigPipeline = $Pipeline
 
     # SECTION Parse the content
-    Write-Debug "Parsing document $File"
-    $context = [MarkdownParserContext]::new()
-    [MarkdownDocument]$document = [MarkdownParser]::Parse( $content , $Pipeline , $context)
-    Write-Debug "Context properties: $($context.Properties.Keys.Count))"
-    if ($null -ne $tw) {
-      $tw.Flush()
-      $tw.Close()
+    if (-not ($PSBoundParameters.ContainsKey('Context'))) {
+      $Context = New-MarkdownParserContext
     }
+    Write-Debug "Parsing document $File"
+    try {
+      [MarkdownDocument]$document = [MarkdownParser]::Parse( $Content , $Pipeline , $Context)
+    } catch {
+      $err = $_ # The original error
+      $message = 'There was an error parsing the content'
+      $exceptionText = ( @($message, $err.ToString()) -join "`n")
+      $newException = [Exception]::new($exceptionText)
+      $eRecord = [ErrorRecord]::new(
+        $newException,
+        $err.FullyQualifiedErrorId,
+        $err.CategoryInfo.Category,
+        $null
+      )
+      $PSCmdlet.ThrowTerminatingError( $eRecord )
+    } finally {
+      if ($null -ne $Script:ParserDebugWriter) {
+        $Script:ParserDebugWriter.Flush()
+        $Script:ParserDebugWriter.Close()
+        Remove-Variable 'ParserDebugWriter' -Scope Script -ErrorAction SilentlyContinue
+      }
+    }
+
     Write-Debug "Parsing complete. created $($document.GetType())"
     # !SECTION
 
     if ($null -ne $document) {
+      # NOTE: powershell sees the MarkdownDocument object as an array, and loves to
+      # unroll it on the pipeline, so whenever you want to access the MarkdownDocument
+      # object directly, do it like this:
       Write-Output $document -NoEnumerate
     } else {
-      throw "There was an error parsing $File"
+      throw "There was an error parsing. No Markdown object was produced"
     }
     Write-Debug "`n$('-' * 80)`n-- End $($self.Name)`n$('-' * 80)"
   }
