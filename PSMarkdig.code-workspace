@@ -1,0 +1,14 @@
+{
+	"folders": [
+    {
+      "name": "PSMarkdig Project",
+      "path": "."
+    }
+  ],
+  "settings": {
+    "powershell.cwd": "PSMarkdig",
+    "commentAnchors.epic.provideAutoCompletion": true,
+    "commentAnchors.tags.provideAutoCompletion": false,
+    "commentAnchors.workspace.enabled": true
+  }
+}
