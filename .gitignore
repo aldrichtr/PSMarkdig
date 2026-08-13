@@ -1,0 +1,9 @@
+# Build output
+out/
+stage/
+
+# Dependencies (restored via build)
+source/PSMarkdig/bin/
+
+# Scratch
+*.zip

@@ -1,0 +1,20 @@
+
+blank_issues_enabled: false
+
+contact_links:
+  - name: Questions / Discussions
+    url: https://github.com/aldrichtr/PSMarkdown/discussions
+    about: For general questions, ideas, or help that are not feature requests or bugs.
+
+issue_template:
+  - name: Feature Request
+    description: Propose a new function, capability, or behavior
+    file: feature_request.md
+    labels: ["enhancement"]
+  - name: Bug Report
+    description: Report incorrect behavior or unexpected results
+    file: bug_report.md
+    labels: ["bug"]
+  - name: Spike Request
+    description: Time-boxed investigation to explore an approach, dependency, or design question
+    labels: ["spike"]
