@@ -115,9 +115,9 @@ Paragraph text.
   }
 
   Context 'Pipeline unrolling - the core scenario' {
-    It 'Should pipe directly to Select-YamlFrontMatter without the comma trick' {
+    It 'Should pipe directly to Select-MarkdigYamlFrontMatter without the comma trick' {
       $doc = Import-Markdown -Path $utf8Path
-      $fm = $doc | Select-YamlFrontMatter
+      $fm = $doc | Select-MarkdownYamlFrontMatterBlock
       $fm | Should-NotBeNull
       $fm.title | Should-Be 'UTF8 Test'
     }
