@@ -15,10 +15,7 @@ function Get-MarkdigPipeline {
     )]
     [MarkdigDocument]$Document
   )
-  begin {
-    $self = $MyInvocation.MyCommand
-    Write-Debug "`n$('-' * 80)`n-- Begin $($self.Name)`n$('-' * 80)"
-  }
+  begin {}
   process {
     if ($null -ne $Document) {
       $Document.Pipeline
@@ -26,7 +23,5 @@ function Get-MarkdigPipeline {
       throw 'No MarkdigDocument was given'
     }
   }
-  end {
-    Write-Debug "`n$('-' * 80)`n-- End $($self.Name)`n$('-' * 80)"
-  }
+  end {}
 }

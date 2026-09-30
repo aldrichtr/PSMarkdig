@@ -94,7 +94,5 @@ function Import-DependentLibrary {
       $PSCmdlet.ThrowTerminatingError( $eRecord )
     }
   }
-  end {
-    Write-Debug "`n$('-' * 80)`n-- End $($self.Name)`n$('-' * 80)"
-  }
+  end {}
 }
