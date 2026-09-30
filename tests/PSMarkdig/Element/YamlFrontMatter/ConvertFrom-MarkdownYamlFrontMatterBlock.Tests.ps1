@@ -1,5 +1,5 @@
 
-Describe 'ConvertFrom-MarkdigYamlFrontMatterBlock' -Tags @('unit') {
+Describe 'ConvertFrom-MarkdownYamlFrontMatterBlock' -Tags @('unit') {
   BeforeAll {
     $markdown = @"
 ---
@@ -20,7 +20,7 @@ nested:
 
   Context 'When converting to a PSCustomObject (default)' {
     BeforeAll {
-      $result = $block | ConvertFrom-MarkdigYamlFrontMatterBlock
+      $result = $block | ConvertFrom-MarkdownYamlFrontMatterBlock
     }
 
     It 'Should return a non-null object' {
@@ -46,7 +46,7 @@ nested:
 
   Context 'When converting with -AsHashtable' {
     BeforeAll {
-      $result = $block | ConvertFrom-MarkdigYamlFrontMatterBlock -AsHashtable
+      $result = $block | ConvertFrom-MarkdownYamlFrontMatterBlock -AsHashtable
     }
 
     It 'Should return a hashtable' {
@@ -71,7 +71,7 @@ nested:
 
     It 'Should handle empty front matter gracefully' {
       # Either returns null or empty - should not throw
-      { $emptyBlock | ConvertFrom-MarkdigYamlFrontMatterBlock } | Should -Not -Throw
+      { $emptyBlock | ConvertFrom-MarkdownYamlFrontMatterBlock } | Should -Not -Throw
     }
   }
 }
