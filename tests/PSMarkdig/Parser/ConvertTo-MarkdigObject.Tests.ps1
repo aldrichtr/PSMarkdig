@@ -97,7 +97,7 @@ Get-Process | Select-Object Name
 
     It 'Should pipe to downstream functions correctly' {
       # This is THE test - the whole reason for the wrapper
-      $frontMatter = $result | Select-YamlFrontMatter
+      $frontMatter = $result | Select-MarkdownYamlFrontMatterBlock
       $frontMatter | Should-NotBeNull
       $frontMatter.title | Should-Be 'Test Document'
     }

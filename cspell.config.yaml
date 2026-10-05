@@ -1,0 +1,13 @@
+version: "0.2"
+enabled: true
+ignorePaths:
+  - .git/**
+  - out/**
+dictionaries:
+  - "project-dictionary"
+dictionaryDefinitions:
+  - name: "project-dictionary"
+    path: ".cspell/project-dictionary.txt"
+words: []
+ignoreWords: []
+import: []

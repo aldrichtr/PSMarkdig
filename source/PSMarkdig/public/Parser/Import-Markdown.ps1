@@ -1,10 +1,11 @@
-
+﻿
 using namespace System.Collections
 using namespace System.IO
+using namespace System.Management.Automation
 using namespace System.Text
 using namespace Markdig
-using namespace Markdig.Parsers
 using namespace Markdig.Helpers
+using namespace Markdig.Parsers
 using namespace Markdig.Syntax
 
 function Import-Markdown {
@@ -15,12 +16,14 @@ function Import-Markdown {
       Accepts markdown content as text or a file path, parses it using the Markdig library,
       and returns a [MarkdigDocument] object that carries the AST, pipeline, context, source
       path, encoding, and line-ending metadata together.
-
+    .INPUTS
+      - [System.String[]]
+    .NOTES
       The wrapper prevents PowerShell's pipeline unrolling of the underlying MarkdownDocument
       (which implements IEnumerable), so you can pipe naturally:
-
+    .EXAMPLE
         $doc = Import-Markdown ./README.md
-        $doc | Select-YamlFrontMatter
+        $doc | Select-MarkdigYamlFrontMatter
 
     .EXAMPLE
       $doc = Get-ChildItem "Changelog.md" | Import-Markdown
@@ -30,6 +33,9 @@ function Import-Markdown {
 
     .EXAMPLE
       $doc = Import-Markdown -Path "./notes.md" -Extensions 'pipetables','yaml'
+    .LINK
+      ConvertTo-MarkdigObject
+      Show-MarkdigAst
   #>
   [CmdletBinding(
     DefaultParameterSetName = 'AsText'
@@ -103,6 +109,7 @@ function Import-Markdown {
                 $options[$p] = $PSBoundParameters[$p]
               }
             }
+
             try {
               Write-Debug "Parsing '$"
               $result = ConvertTo-MarkdigObject @options
@@ -113,7 +120,7 @@ function Import-Markdown {
               $message = "Could not parse '$File'"
               $exceptionText = ( @($message, $err.ToString()) -join "`n")
               $newException = [Exception]::new($exceptionText)
-              $eRecord = [System.Management.Automation.ErrorRecord]::new(
+              $eRecord = [ErrorRecord]::new(
                 $newException,
                 $err.FullyQualifiedErrorId,
                 $err.CategoryInfo.Category,
@@ -144,10 +151,10 @@ function Import-Markdown {
         ConvertTo-MarkdigObject @options
       } catch {
         $err = $_ # The original error
-        $message = "Could not parse content"
+        $message = 'Could not parse content'
         $exceptionText = ( @($message, $err.ToString()) -join "`n")
         $newException = [Exception]::new($exceptionText)
-        $eRecord = [System.Management.Automation.ErrorRecord]::new(
+        $eRecord = [ErrorRecord]::new(
           $newException,
           $err.FullyQualifiedErrorId,
           $err.CategoryInfo.Category,
